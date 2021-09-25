@@ -4,17 +4,15 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
     private val RESULT_1: String = "Result #1"
     private val RESULT_2: String = "Result #2"
+    private val TIMEOUT: Long = 1900L
 
     private lateinit var textHelloWorld: TextView
 
@@ -30,7 +28,6 @@ class MainActivity : AppCompatActivity() {
                 fakeAPIRequest()
             }
         }
-
     }
 
     private fun setHelloWorldText(input: String) {
@@ -45,13 +42,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun fakeAPIRequest() {
-        val result1 = getResultFromAPI1()
-        println("debug: $result1")
-        setTextOnMainThread(result1)
+        val job = withTimeoutOrNull(TIMEOUT){
+            val result1 = getResultFromAPI1()
+            println("debug: $result1")
+            setTextOnMainThread(result1)
 
-        val result2 = getResultFromAPI2()
-        println("debug: $result2")
-        setTextOnMainThread(result2)
+            val result2 = getResultFromAPI2()
+            println("debug: $result2")
+            setTextOnMainThread(result2)
+        }
+
+        if (job == null) {
+            val cancelMessage = "Cancelling job.... job tooks longer than $TIMEOUT"
+            println("debug: $cancelMessage")
+            setTextOnMainThread(cancelMessage)
+        }
+
     }
 
     private suspend fun getResultFromAPI2(): String {
