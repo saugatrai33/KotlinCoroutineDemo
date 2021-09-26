@@ -1,9 +1,9 @@
 package com.example.kotlincoroutinedemo
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
 
     private val RESULT_1: String = "Result #1"
     private val RESULT_2: String = "Result #2"
-    private val TIMEOUT: Long = 1900L
+    private val RESULT_3: String = "Result #3"
 
     private lateinit var textHelloWorld: TextView
 
@@ -24,9 +24,7 @@ class MainActivity : AppCompatActivity() {
         textHelloWorld = findViewById(R.id.textHelloWorld)
 
         btnClickMe.setOnClickListener {
-            CoroutineScope(IO).launch {
-                fakeAPIRequest()
-            }
+            fakeAPIRequest()
         }
     }
 
@@ -41,29 +39,43 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun fakeAPIRequest() {
-        val job = withTimeoutOrNull(TIMEOUT){
-            val result1 = getResultFromAPI1()
-            println("debug: $result1")
-            setTextOnMainThread(result1)
+    private fun fakeAPIRequest() {
+        CoroutineScope(IO).launch {
 
-            val result2 = getResultFromAPI2()
-            println("debug: $result2")
-            setTextOnMainThread(result2)
+            val result1 =
+                withContext(Dispatchers.Default) {
+                    getResultFromAPI1()
+                }
+
+            val result2 =
+                withContext(Dispatchers.Default) {
+                    getResultFromAPI2(result1)
+                }
+
+            val result3 =
+                withContext(Dispatchers.Default) {
+                    getResultFromAPI3(result2 = result2)
+                }
+
+            setTextOnMainThread(result3)
+
         }
-
-        if (job == null) {
-            val cancelMessage = "Cancelling job.... job tooks longer than $TIMEOUT"
-            println("debug: $cancelMessage")
-            setTextOnMainThread(cancelMessage)
-        }
-
     }
 
-    private suspend fun getResultFromAPI2(): String {
+    private suspend fun getResultFromAPI3(result2: String): String {
+        logThread("getResultFromAPI3")
+        delay(1000)
+        if (result2 == RESULT_2)
+            return RESULT_3
+        return "Error result3"
+    }
+
+    private suspend fun getResultFromAPI2(result1: String): String {
         logThread("getResultFromAPI2")
         delay(1000)
-        return RESULT_2
+        if (result1 == RESULT_1)
+            return RESULT_2
+        return "Error result2"
     }
 
     private suspend fun getResultFromAPI1(): String {
@@ -73,7 +85,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logThread(methodName: String) {
-        println("debug: $methodName: ${Thread.currentThread().name}")
+        println("debug: current thread: $methodName: ${Thread.currentThread().name}")
     }
 
 }
